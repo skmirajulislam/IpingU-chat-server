@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>C++ LAN Chat Room</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --primary-color: #4f46e5;
+            --secondary-color: #10b981;
+            --danger-color: #ef4444;
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --border-color: #475569;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container { width: 100%; height: 100vh; display: flex; }
+        .join-container { align-items: center; justify-content: center; padding: 20px; }
+
+        .join-box {
+            background: var(--bg-secondary);
+            padding: 40px;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            max-width: 400px;
+            width: 100%;
+            border: 1px solid var(--border-color);
+        }
+
+        .join-box h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            text-align: center;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle { text-align: center; color: var(--text-secondary); margin-bottom: 30px; font-size: 14px; }
+        .join-form { display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
+
+        .input-field {
+            padding: 12px 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+        .input-field:focus { outline: none; border-color: var(--primary-color); }
+
+        .btn {
+            padding: 12px 20px; border: none; border-radius: 8px;
+            font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;
+        }
+        .btn-primary { background: linear-gradient(135deg, var(--primary-color), #6366f1); color: white; width: 100%; }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3); }
+        .btn-send { background: linear-gradient(135deg, var(--secondary-color), #059669); color: white; }
+        .btn-send:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(16, 185, 129, 0.3); }
+        .btn-danger { background: linear-gradient(135deg, var(--danger-color), #dc2626); color: white; padding: 10px 14px; border-radius: 8px; font-size: 13px; }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; }
+            .chat-layout { flex-direction: column; }
+            .header { padding: 12px; }
+            .header-title h1 { font-size: 18px; }
+            .message-bubble { max-width: 80%; }
+        }
+        @media (max-width: 480px) {
+            .join-box { padding: 24px; }
+            .header { padding: 10px; }
+            .header-title h1 { font-size: 16px; }
+            .stat-label { display: none; }
+            .message-form { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; }
+            .messages-container { padding-bottom: 80px; }
+        }
+
+        .error-message { color: var(--danger-color); font-size: 13px; text-align: center; min-height: 20px; }
+
+        .chat-container { display: none; flex-direction: column; padding: 0; }
+        .header {
+            background: var(--bg-secondary); border-bottom: 1px solid var(--border-color);
+            padding: 20px; display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+        .header-title h1 { font-size: 24px; margin-bottom: 5px; }
+        .welcome-message { color: var(--text-secondary); font-size: 13px; }
+        .stat { display: flex; align-items: center; gap: 8px; }
+        .stat-label { color: var(--text-secondary); font-size: 13px; }
+        .stat-value { background: var(--primary-color); padding: 4px 12px; border-radius: 20px; font-weight: 600; color: white; }
+        .encrypt-badge { font-size: 12px; background: linear-gradient(135deg, #10b981, #059669); padding: 3px 10px; border-radius: 12px; vertical-align: middle; color: white; }
+
+        .chat-layout { display: flex; flex: 1; overflow: hidden; }
+        .sidebar { width: 250px; background: var(--bg-tertiary); border-right: 1px solid var(--border-color); padding: 20px; overflow-y: auto; }
+        .sidebar h3 { font-size: 14px; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 15px; }
+        .users-list { display: flex; flex-direction: column; gap: 8px; }
+        .user-item { padding: 10px 12px; background: var(--bg-secondary); border-radius: 6px; font-size: 13px; border-left: 3px solid var(--primary-color); }
+        .user-item.current-user { background: var(--primary-color); color: white; border-left-color: var(--secondary-color); }
+
+        .chat-main { flex: 1; display: flex; flex-direction: column; background: var(--bg-primary); }
+        .messages-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .system-message { text-align: center; color: var(--text-secondary); font-size: 13px; }
+        .system-message p { padding: 8px 16px; background: rgba(79, 70, 229, 0.1); border: 1px solid rgba(79, 70, 229, 0.2); border-radius: 6px; display: inline-block; }
+
+        .message { display: flex; margin-bottom: 4px; animation: slideIn 0.3s ease; }
+        .message.user-message { justify-content: flex-end; }
+        .message.other-message { justify-content: flex-start; }
+        .message-bubble { max-width: 60%; padding: 10px 14px; border-radius: 8px; word-wrap: break-word; font-size: 14px; }
+        .message.user-message .message-bubble { background: var(--primary-color); color: white; border-bottom-right-radius: 2px; }
+        .message.other-message .message-bubble { background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-bottom-left-radius: 2px; }
+        .message-meta { font-size: 11px; color: var(--text-secondary); margin-top: 3px; padding: 0 8px; }
+        .message.user-message .message-meta { text-align: right; }
+
+        .message-form { display: flex; gap: 10px; padding: 15px 20px; background: var(--bg-secondary); border-top: 1px solid var(--border-color); }
+        .message-form .input-field { flex: 1; }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary-color); }
+    </style>
+</head>
+<body>
+    <div id="join-container" class="container join-container">
+        <div class="join-box">
+            <h1>C++ LAN Chat</h1>
+            <p class="subtitle">Enter your name to join the encrypted chat</p>
+            <form id="join-form" class="join-form">
+                <input type="text" id="username-input" class="input-field" placeholder="Enter your name" maxlength="20" required autofocus>
+                <button type="submit" class="btn btn-primary">Join Chat</button>
+            </form>
+            <div id="join-error" class="error-message"></div>
+        </div>
+    </div>
+
+    <div id="chat-container" class="container chat-container">
+        <div class="header">
+            <div class="header-title">
+                <h1>C++ LAN Chat <span class="encrypt-badge">&#x1F512; Encrypted</span></h1>
+                <p id="welcome-message" class="welcome-message"></p>
+            </div>
+            <div class="header-right">
+                <div class="header-stats">
+                    <div class="stat">
+                        <span class="stat-label">Users Online:</span>
+                        <span id="user-count" class="stat-value">1</span>
+                    </div>
+                </div>
+                <button id="leave-btn" class="btn btn-danger">Leave Chat</button>
+            </div>
+        </div>
+
+        <div class="chat-layout">
+            <div class="sidebar">
+                <h3>Connected Users</h3>
+                <div id="users-list" class="users-list"></div>
+            </div>
+            <div class="chat-main">
+                <div id="messages-container" class="messages-container">
+                    <div class="system-message"><p>Welcome to C++ LAN Chat! &#x1F44B;</p></div>
+                </div>
+                <form id="message-form" class="message-form">
+                    <input type="text" id="message-input" class="input-field" placeholder="Type a message and press Enter..." maxlength="500" required>
+                    <button type="submit" class="btn btn-send">Send</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Session encryption key — auto-generated by server, unique per server restart
+        // Anyone loading this page gets the key; network sniffers do NOT.
+        const ENC_KEY = '__SESSION_KEY__';
+
+        let currentUsername = null;
+        let currentUserID = null;
+        let pollInterval = null;
+        let lastMessageCount = 0;
+
+        const $ = id => document.getElementById(id);
+        const joinContainer = $('join-container');
+        const chatContainer = $('chat-container');
+        const joinForm = $('join-form');
+        const messageForm = $('message-form');
+        const usernameInput = $('username-input');
+        const messageInput = $('message-input');
+        const messagesContainer = $('messages-container');
+        const usersList = $('users-list');
+        const userCountSpan = $('user-count');
+        const welcomeMessage = $('welcome-message');
+        const joinError = $('join-error');
+        const leaveBtn = $('leave-btn');
+
+        // ── Transparent Encryption (auto, no user action needed) ──
+
+        function deriveBytes(seed, length) {
+            const bytes = [];
+            let h1 = 0x811c9dc5, h2 = 0x6c078965;
+            for (let round = 0; bytes.length < length; round++) {
+                for (let i = 0; i <= seed.length; i++) {
+                    const c = i < seed.length ? seed.charCodeAt(i) : round;
+                    h1 = Math.imul(h1 ^ c, 0x01000193);
+                    h2 = Math.imul(h2 ^ c, 0x5bd1e995);
+                    if (bytes.length < length) bytes.push((h1 ^ h2) & 0xFF);
+                }
+            }
+            return bytes;
+        }
+
+        function encrypt(plaintext) {
+            const iv = new Uint8Array(8);
+            crypto.getRandomValues(iv);
+            const ivHex = Array.from(iv, b => b.toString(16).padStart(2, '0')).join('');
+            const data = new TextEncoder().encode(plaintext);
+            const stream = deriveBytes(ENC_KEY + ':' + ivHex, data.length);
+            const out = new Uint8Array(8 + data.length);
+            out.set(iv);
+            for (let i = 0; i < data.length; i++) out[8 + i] = data[i] ^ stream[i];
+            return btoa(String.fromCharCode(...out));
+        }
+
+        function decrypt(encoded) {
+            try {
+                const raw = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
+                const iv = raw.slice(0, 8);
+                const cipher = raw.slice(8);
+                const ivHex = Array.from(iv, b => b.toString(16).padStart(2, '0')).join('');
+                const stream = deriveBytes(ENC_KEY + ':' + ivHex, cipher.length);
+                const plain = new Uint8Array(cipher.length);
+                for (let i = 0; i < cipher.length; i++) plain[i] = cipher[i] ^ stream[i];
+                return new TextDecoder().decode(plain);
+            } catch {
+                return '[error]';
+            }
+        }
+
+        // ── Event Listeners ──
+
+        joinForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const username = usernameInput.value.trim();
+            if (!username) { joinError.textContent = 'Please enter a name'; return; }
+            joinUser(username);
+        });
+
+        messageForm.addEventListener('submit', e => {
+            e.preventDefault();
+            const text = messageInput.value.trim();
+            if (!text) return;
+            sendMessage(text);
+            messageInput.value = '';
+            messageInput.focus();
+        });
+
+        leaveBtn.addEventListener('click', () => leaveChat());
+
+        // ── API Functions ──
+
+        async function joinUser(username) {
+            try {
+                const res = await fetch('/api/join', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    currentUsername = username;
+                    currentUserID = data.userId;
+                    joinContainer.style.display = 'none';
+                    chatContainer.style.display = 'flex';
+                    welcomeMessage.textContent = 'Welcome, ' + currentUsername + '!';
+                    messageInput.focus();
+                    addSystemMessage('You joined as ' + currentUsername + ' \u2022 Messages are encrypted');
+                    startPolling();
+                } else {
+                    joinError.textContent = data.message || 'Failed to join';
+                }
+            } catch (err) {
+                joinError.textContent = 'Connection error';
+                console.error(err);
+            }
+        }
+
+        async function sendMessage(text) {
+            try {
+                const res = await fetch('/api/message', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ userId: currentUserID, text: encrypt(text) })
+                });
+                const data = await res.json();
+                if (!data.success) console.error('Send failed:', data.message);
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function pollUpdates() {
+            try {
+                const res = await fetch('/api/status?userId=' + currentUserID);
+                const data = await res.json();
+                userCountSpan.textContent = data.userCount;
+                updateUsersList(data.users);
+                if (data.messages.length < lastMessageCount) {
+                    lastMessageCount = 0;
+                    messagesContainer.innerHTML = '<div class="system-message"><p>Welcome to C++ LAN Chat! &#x1F44B;</p></div>';
+                }
+                if (data.messages.length > lastMessageCount) {
+                    const msgs = data.messages.slice(lastMessageCount);
+                    for (const msg of msgs) {
+                        addMessage(msg.username, decrypt(msg.text), msg.timestamp, msg.username === currentUsername);
+                    }
+                    lastMessageCount = data.messages.length;
+                }
+            } catch (err) {
+                console.error('Poll error:', err);
+            }
+        }
+
+        function startPolling() {
+            pollUpdates();
+            pollInterval = setInterval(pollUpdates, 1000);
+        }
+
+        // ── UI Functions ──
+
+        function addMessage(username, text, timestamp, isOwn) {
+            const div = document.createElement('div');
+            div.className = 'message ' + (isOwn ? 'user-message' : 'other-message');
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+            bubble.textContent = text;
+            const meta = document.createElement('div');
+            meta.className = 'message-meta';
+            meta.textContent = username + ' \u2022 ' + timestamp;
+            div.appendChild(bubble);
+            div.appendChild(meta);
+            messagesContainer.appendChild(div);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function addSystemMessage(text) {
+            const div = document.createElement('div');
+            div.className = 'system-message';
+            const p = document.createElement('p');
+            p.textContent = text;
+            div.appendChild(p);
+            messagesContainer.appendChild(div);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        function updateUsersList(users) {
+            usersList.innerHTML = '';
+            users.forEach(u => {
+                const item = document.createElement('div');
+                item.className = 'user-item';
+                if (u === currentUsername) {
+                    item.classList.add('current-user');
+                    item.textContent = u + ' (you)';
+                } else {
+                    item.textContent = u;
+                }
+                usersList.appendChild(item);
+            });
+        }
+
+        async function leaveChat() {
+            clearInterval(pollInterval);
+            try { await fetch('/api/leave?userId=' + currentUserID, { method: 'POST' }); } catch {}
+            resetChat();
+        }
+
+        function resetChat() {
+            currentUsername = currentUserID = null;
+            lastMessageCount = 0;
+            usernameInput.value = messageInput.value = '';
+            joinError.textContent = '';
+            messagesContainer.innerHTML = '<div class="system-message"><p>Welcome to C++ LAN Chat! &#x1F44B;</p></div>';
+            usersList.innerHTML = '';
+            joinContainer.style.display = 'flex';
+            chatContainer.style.display = 'none';
+            usernameInput.focus();
+        }
+
+        usernameInput.focus();
+    </script>
+</body>
+</html>
