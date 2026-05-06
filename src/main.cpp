@@ -31,7 +31,9 @@ static string getLocalIP()
         string name(ifa->ifa_name);
         if (name == "lo" || name == "lo0")
             continue;
-        if (name.find("en") == 0)
+        if (name.find("en") == 0 || name.find("eth") == 0 ||
+            name.find("wlan") == 0 || name.find("wlp") == 0 ||
+            name.find("ens") == 0)
         {
             struct sockaddr_in *addr = (struct sockaddr_in *)ifa->ifa_addr;
             lanIP = inet_ntoa(addr->sin_addr);
@@ -47,9 +49,11 @@ static void *clientThreadFunc(void *arg)
 {
     int clientSocket = (int)(intptr_t)arg;
 
-    // Reject if server is overloaded
-    if (activeConnections.load() >= MAX_CONNECTIONS)
+    // Atomically claim a connection slot; reject if server is overloaded
+    int prev = activeConnections.fetch_add(1);
+    if (prev >= MAX_CONNECTIONS)
     {
+        activeConnections.fetch_sub(1);
         static const char *OVERLOAD_RESP =
             "HTTP/1.1 503 Service Unavailable\r\n"
             "Content-Length: 0\r\nConnection: close\r\n\r\n";
@@ -58,9 +62,8 @@ static void *clientThreadFunc(void *arg)
         return nullptr;
     }
 
-    activeConnections++;
     handleClient(clientSocket);
-    activeConnections--;
+    activeConnections.fetch_sub(1);
     return nullptr;
 }
 
