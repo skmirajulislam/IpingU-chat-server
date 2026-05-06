@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <mutex>
+#include <atomic>
 #include <ctime>
 
 using namespace std;
@@ -33,6 +34,6 @@ struct Message {
 extern map<string, User> connectedUsers;
 extern vector<Message> messageHistory;
 extern mutex stateMutex;
-extern int userCounter;
+extern atomic<int> userCounter;
 
 #endif

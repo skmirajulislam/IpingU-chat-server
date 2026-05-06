@@ -130,6 +130,13 @@ string handleJoin(const string &body)
     if (username.empty() || username.length() > 20)
         return buildErrorResponse("Invalid username");
 
+    // Reject usernames containing control characters
+    for (unsigned char c : username)
+    {
+        if (c < 0x20 || c == 0x7f)
+            return buildErrorResponse("Username contains invalid control characters");
+    }
+
     // Reject duplicate usernames
     for (const auto &pair : connectedUsers)
     {
@@ -312,8 +319,6 @@ void handleClient(int clientSocket)
     {
         if (request.compare(4, 11, "/api/status") == 0)
             response = handleStatus(extractQueryParam(request, "userId"));
-        else if (request.compare(4, 10, "/api/leave") == 0)
-            response = handleLeave(extractQueryParam(request, "userId"));
         else
             response = buildHTTPResponse(loadHTMLTemplate());
     }

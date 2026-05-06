@@ -1,6 +1,7 @@
 #include "../include/utils.h"
 #include <ctime>
 #include <cstring>
+#include <atomic>
 
 // JSON escape — pre-allocates to avoid repeated reallocation
 string JSON::escape(const string &s)
@@ -27,15 +28,16 @@ string getCurrentTimestamp()
 {
     time_t now = time(nullptr);
     char buf[16];
-    strftime(buf, sizeof(buf), "%H:%M:%S", localtime(&now));
+    struct tm tm_buf;
+    strftime(buf, sizeof(buf), "%H:%M:%S", localtime_r(&now, &tm_buf));
     return string(buf);
 }
 
 // Generate unique user ID
 string generateUserID()
 {
-    extern int userCounter;
-    return "user_" + to_string(++userCounter);
+    extern atomic<int> userCounter;
+    return "user_" + to_string(userCounter.fetch_add(1) + 1);
 }
 
 // Simple JSON value extractor for flat JSON objects
